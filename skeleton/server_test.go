@@ -12,14 +12,14 @@ import (
 )
 
 func TestAnswer(t *testing.T) {
-	srv := NewServer(`/api`, numbers.NewMockClient())
+	srv := NewServer(``, numbers.NewMockClient())
 
 	t.Run("GET /answer", func(t *testing.T) {
 		got := struct {
 			Result string
 		}{}
 		expected := "Hello! Your lucky number is 42."
-		request, err := http.NewRequest(http.MethodGet, "http://localhost:8000/api/answer", nil)
+		request, err := http.NewRequest(http.MethodGet, "http://localhost:8000/answer", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -46,7 +46,7 @@ func TestAnswer(t *testing.T) {
 			Name: `Stefano`,
 		})
 		expected := "Hello, Stefano! Your lucky number is 42."
-		request, err := http.NewRequest(http.MethodPost, "http://localhost:8000/api/answer", sent)
+		request, err := http.NewRequest(http.MethodPost, "http://localhost:8000/answer", sent)
 		if err != nil {
 			t.Fatal(err)
 		}

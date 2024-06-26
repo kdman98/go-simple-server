@@ -16,7 +16,7 @@ import (
 
 func main() {
 	apiPort := ":" + skeleton.GetOrDefault("API_PORT", "8000")
-	apiPrefix := skeleton.GetOrDefault("API_PREFIX", "/api")
+	apiPrefix := skeleton.GetOrDefault("API_PREFIX", "")
 
 	runServer(apiPort, apiPrefix)
 }
