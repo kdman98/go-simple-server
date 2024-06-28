@@ -2,31 +2,40 @@ package skeleton
 
 import (
 	"encoding/json"
+	"github.com/joho/godotenv"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
-
-	"github.com/scharissis/go-server-skeleton/skeleton/numbers"
 )
 
-type server struct {
-	urlPrefix    string
-	router       *mux.Router
-	numberClient numbers.Client
+type Server struct {
+	urlPrefix string
+	router    *mux.Router
+	apiKey    string
 }
 
-func NewServer(urlPrefix string, nClient numbers.Client) *server {
-	s := &server{urlPrefix: urlPrefix, numberClient: nClient}
+func NewServer(urlPrefix string) *Server {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+	// Get API key from environment variables
+	apiKey := os.Getenv("API_KEY")
+	if apiKey == "" {
+		log.Fatal("API_KEY not set in .env file")
+	}
+	s := &Server{urlPrefix: urlPrefix, apiKey: apiKey}
 	s.routes()
 	return s
 }
 
-func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.router.ServeHTTP(w, r)
 }
 
-func (s *server) respond(w http.ResponseWriter, r *http.Request, data interface{}, statusCode int) {
+func (s *Server) respond(w http.ResponseWriter, r *http.Request, data interface{}, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	if data != nil {
@@ -38,6 +47,6 @@ func (s *server) respond(w http.ResponseWriter, r *http.Request, data interface{
 	}
 }
 
-func (s *server) decode(w http.ResponseWriter, r *http.Request, v interface{}) error {
+func (s *Server) decode(w http.ResponseWriter, r *http.Request, v interface{}) error {
 	return json.NewDecoder(r.Body).Decode(v)
 }

@@ -3,28 +3,78 @@ package skeleton
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
+	"time"
 )
 
-func (s *server) answer() http.HandlerFunc {
+// Respond method to write the response
+func (s *Server) respondNexon(w http.ResponseWriter, r *http.Request, data interface{}, status int) {
+	w.WriteHeader(status)
+	if data != nil {
+		json.NewEncoder(w).Encode(data)
+	}
+}
+
+// Handler function for answering requests
+func (s *Server) answer() http.HandlerFunc {
 	type request struct {
-		Name string
+		Name string `json:"name"`
 	}
 	type response struct {
-		Result string
+		Result string `json:"result"`
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		req := request{}
 
-		// Acquire a lucky number
-		luckyNum := s.numberClient.Get()
-
 		if r.Method == http.MethodGet {
-			resp := response{
-				Result: fmt.Sprintf("Hello! Your lucky number is %d.", luckyNum),
+			nickname := r.URL.Query().Get("nickname")
+			apiKey := s.apiKey
+			if nickname != "" && apiKey != "" {
+				// Make API request to Nexon with the nickname and apiKey
+				nexonURL := fmt.Sprintf("https://open.api.nexon.com/fconline/v1/id?nickname=%s&apikey=%s", nickname, apiKey)
+				client := &http.Client{Timeout: 10 * time.Second}
+				apiReq, err := http.NewRequest("GET", nexonURL, nil)
+				if err != nil {
+					s.respond(w, r, nil, http.StatusInternalServerError)
+					log.Println(err)
+					return
+				}
+
+				resp, err := client.Do(apiReq)
+				if err != nil {
+					s.respond(w, r, nil, http.StatusInternalServerError)
+					log.Println(err)
+					return
+				}
+				defer resp.Body.Close()
+
+				if resp.StatusCode != http.StatusOK {
+					s.respond(w, r, nil, resp.StatusCode)
+					log.Println(err)
+					return
+				}
+
+				body, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					s.respond(w, r, nil, http.StatusInternalServerError)
+					log.Println(err)
+					return
+				}
+
+				var apiResponse map[string]interface{}
+				if err := json.Unmarshal(body, &apiResponse); err != nil {
+					s.respond(w, r, nil, http.StatusInternalServerError)
+					log.Println(err)
+					return
+				}
+				//log.Println(apiResponse)
+				s.respond(w, r, apiResponse, http.StatusOK)
+			} else {
+				s.respond(w, r, response{Result: "Nickname or apiKey not provided."}, http.StatusBadRequest)
 			}
-			s.respond(w, r, resp, http.StatusOK)
 		} else {
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				s.respond(w, r, nil, http.StatusBadRequest)
@@ -32,7 +82,7 @@ func (s *server) answer() http.HandlerFunc {
 			}
 
 			resp := response{
-				Result: fmt.Sprintf("Hello, %s! Your lucky number is %d.", req.Name, luckyNum),
+				Result: fmt.Sprintf("Hello, %s!", req.Name),
 			}
 			s.respond(w, r, resp, http.StatusOK)
 		}

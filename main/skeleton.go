@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/scharissis/go-server-skeleton/skeleton"
 	"log"
 	"net/http"
 	"os"
@@ -9,9 +10,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-
-	"github.com/scharissis/go-server-skeleton/skeleton"
-	"github.com/scharissis/go-server-skeleton/skeleton/numbers"
 )
 
 func main() {
@@ -22,10 +20,11 @@ func main() {
 }
 
 func runServer(port, prefix string) {
+
 	var wg sync.WaitGroup
 	defer wg.Wait()
 
-	srv := skeleton.NewServer(prefix, numbers.NewClient())
+	srv := skeleton.NewServer(prefix)
 	s := &http.Server{
 		Addr:         port,
 		ReadTimeout:  5 * time.Second,

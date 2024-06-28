@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func (s *server) routes() {
+func (s *Server) routes() {
 	s.router = mux.NewRouter()
 	s.router.HandleFunc(s.urlPrefix+"/answer", restrictMethods(s.answer(), http.MethodGet, http.MethodPost))
 }
