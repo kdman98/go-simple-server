@@ -33,8 +33,8 @@ func (s *Server) answer() http.HandlerFunc {
 			nickname := r.URL.Query().Get("nickname")
 			apiKey := s.apiKey
 			if nickname != "" && apiKey != "" {
-				// Make API request to Nexon with the nickname and apiKey
-				nexonURL := fmt.Sprintf("https://open.api.nexon.com/fconline/v1/id?nickname=%s&apikey=%s", nickname, apiKey)
+				// Make API request to Nexon with the nickname
+				nexonURL := fmt.Sprintf("https://open.api.nexon.com/fconline/v1/id?nickname=%s", nickname)
 				client := &http.Client{Timeout: 10 * time.Second}
 				apiReq, err := http.NewRequest("GET", nexonURL, nil)
 				if err != nil {
@@ -42,6 +42,7 @@ func (s *Server) answer() http.HandlerFunc {
 					log.Println(err)
 					return
 				}
+				apiReq.Header.Set("x-nxopen-api-key", apiKey)
 
 				resp, err := client.Do(apiReq)
 				if err != nil {
@@ -52,8 +53,8 @@ func (s *Server) answer() http.HandlerFunc {
 				defer resp.Body.Close()
 
 				if resp.StatusCode != http.StatusOK {
-					s.respond(w, r, nil, resp.StatusCode)
-					log.Println(err)
+					s.respond(w, r, resp.Body, resp.StatusCode)
+					log.Println(resp)
 					return
 				}
 
