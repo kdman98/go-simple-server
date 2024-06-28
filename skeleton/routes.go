@@ -8,5 +8,5 @@ import (
 
 func (s *Server) routes() {
 	s.router = mux.NewRouter()
-	s.router.HandleFunc(s.urlPrefix+"/answer", restrictMethods(s.answer(), http.MethodGet, http.MethodPost))
+	s.router.HandleFunc(s.urlPrefix+"/search-matches", restrictMethods(s.searchMatches(), http.MethodGet, http.MethodPost))
 }

@@ -14,7 +14,7 @@ import (
 func TestAnswer(t *testing.T) {
 	srv := NewServer(``, numbers.NewMockClient())
 
-	t.Run("GET /answer", func(t *testing.T) {
+	t.Run("GET /searchMatches", func(t *testing.T) {
 		got := struct {
 			Result string
 		}{}
@@ -36,7 +36,7 @@ func TestAnswer(t *testing.T) {
 		assert.Equal(t, expected, got.Result)
 	})
 
-	t.Run("POST /answer", func(t *testing.T) {
+	t.Run("POST /searchMatches", func(t *testing.T) {
 		got := struct {
 			Result string
 		}{}

@@ -16,14 +16,14 @@ import (
 func TestAnswerHandler(t *testing.T) {
 	srv := NewServer(``, numbers.NewMockClient())
 
-	t.Run("GET /answer", func(t *testing.T) {
+	t.Run("GET /searchMatches", func(t *testing.T) {
 		got := struct {
 			Result string
 		}{}
 		expected := "Hello! Your lucky number is 42."
-		request := httptest.NewRequest(http.MethodGet, "/answer", nil)
+		request := httptest.NewRequest(http.MethodGet, "/searchMatches", nil)
 		response := httptest.NewRecorder()
-		srv.answer()(response, request)
+		srv.searchMatches()(response, request)
 
 		err := json.NewDecoder(response.Body).Decode(&got)
 		if err != nil {
@@ -34,7 +34,7 @@ func TestAnswerHandler(t *testing.T) {
 		assert.Equal(t, expected, got.Result)
 	})
 
-	t.Run("POST /answer", func(t *testing.T) {
+	t.Run("POST /searchMatches", func(t *testing.T) {
 		got := struct {
 			Result string
 		}{}
@@ -44,9 +44,9 @@ func TestAnswerHandler(t *testing.T) {
 			Name: `Stefano`,
 		})
 		expected := "Hello, Stefano! Your lucky number is 42."
-		request := httptest.NewRequest(http.MethodPost, "/answer", sent)
+		request := httptest.NewRequest(http.MethodPost, "/searchMatches", sent)
 		response := httptest.NewRecorder()
-		srv.answer()(response, request)
+		srv.searchMatches()(response, request)
 
 		err := json.NewDecoder(response.Body).Decode(&got)
 		if err != nil {
