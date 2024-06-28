@@ -2,7 +2,6 @@ package skeleton
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -10,31 +9,34 @@ import (
 )
 
 type nexonOuidResponse struct {
-	Result string `json:"ouid"`
+	Ouid string `json:"ouid"`
 }
+
+const ACCOUNT_INFO_REQUEST_URL = "https://open.api.nexon.com/fconline/v1/id"
+const MATCH_LIST_REQUEST_URL = "https://open.api.nexon.com/fconline/v1/user/match"
 
 // Handler function for answering requests
 func (s *Server) searchMatches() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		nickname := r.URL.Query().Get("nickname")
 		if nickname != "" {
-			apiResponse, isErrorOccurred := s.makeRequestAndCheckError(w, r, nickname)
+			ouidResponse, isErrorOccurred := s.makeAccountInfoRequestAndCheckError(w, r, nickname)
 			if isErrorOccurred {
-				s.respond(w, r, apiResponse, http.StatusInternalServerError)
+				s.respond(w, r, ouidResponse, http.StatusInternalServerError)
 				return
 			}
-			log.Println(apiResponse)
-			s.respond(w, r, apiResponse, http.StatusOK)
+			log.Println(ouidResponse.Ouid)
+			s.respond(w, r, ouidResponse, http.StatusOK)
 		} else {
 			s.respond(w, r, "nickname not provided", http.StatusBadRequest)
 		}
 	}
 }
 
-func (s *Server) makeRequestAndCheckError(w http.ResponseWriter, r *http.Request, nickname string) (nexonOuidResponse, bool) {
+func (s *Server) makeAccountInfoRequestAndCheckError(w http.ResponseWriter, r *http.Request, nickname string) (nexonOuidResponse, bool) {
 	apiKey := s.nexonApiKey
 	// Make API request to Nexon with the nickname
-	nexonURL := fmt.Sprintf("https://open.api.nexon.com/fconline/v1/id?nickname=%s", nickname)
+	nexonURL := ACCOUNT_INFO_REQUEST_URL + "?nickname=" + nickname // TODO: refactor
 	client := &http.Client{Timeout: 10 * time.Second}
 	apiReq, err := http.NewRequest("GET", nexonURL, nil)
 	if err != nil {
