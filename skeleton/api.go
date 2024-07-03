@@ -3,6 +3,7 @@ package skeleton
 import (
 	"encoding/json"
 	"github.com/scharissis/go-server-skeleton/skeleton/enums"
+	"github.com/scharissis/go-server-skeleton/skeleton/structs"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -14,15 +15,15 @@ type nexonOuidResponse struct {
 	Ouid string `json:"ouid"`
 }
 
-// Assuming matchListResponse is just a slice of strings
 type matchListResponse []string
 
 const (
-	ACCOUNT_INFO_REQUEST_URL = "https://open.api.nexon.com/fconline/v1/id"
-	MATCH_LIST_REQUEST_URL   = "https://open.api.nexon.com/fconline/v1/user/match"
+	AccountInfoRequestUrl = "https://open.api.nexon.com/fconline/v1/id"
+	MatchListRequestUrl   = "https://open.api.nexon.com/fconline/v1/user/match"
+	MatchDetailRequestUrl = "https://open.api.nexon.com/fconline/v1/match-detail"
 )
 
-func (s *Server) matchStatistics() http.HandlerFunc { // TODO: add up functions on demand
+func (s *Server) matchStatistics() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		nickname := r.URL.Query().Get("nickname")
 		if nickname == "" {
@@ -37,11 +38,22 @@ func (s *Server) matchStatistics() http.HandlerFunc { // TODO: add up functions 
 			return
 		}
 
-		s.respond(w, r, matchList, http.StatusOK)
+		var matchDetailList []structs.MatchDetailResponse
+
+		for _, match := range matchList[:10] {
+			matchDetail, err := s.getMatchDetail(match)
+			if err != nil {
+				log.Printf("Failed to get match detail for match UUID %s - error: %v", match, err)
+				continue
+				// continue mapping other matches, unplugged match might cause problem. need to find out specifically why
+			}
+			matchDetailList = append(matchDetailList, matchDetail)
+		}
+
+		s.respond(w, r, matchDetailList, http.StatusOK)
 	}
 }
 
-// Function for searching matches based on the nickname
 func (s *Server) searchMatches(nickname string) (matchListResponse, error) {
 	ouidResponse, err := s.makeAccountInfoRequest(nickname)
 	if err != nil {
@@ -62,12 +74,8 @@ func (s *Server) searchMatches(nickname string) (matchListResponse, error) {
 }
 
 func (s *Server) makeAccountInfoRequest(nickname string) (nexonOuidResponse, error) {
-	nexonURL, err := url.Parse(ACCOUNT_INFO_REQUEST_URL)
-	if err != nil {
-		return nexonOuidResponse{}, err
-	}
+	nexonURL, _ := url.Parse(AccountInfoRequestUrl)
 
-	// Set query parameters
 	params := url.Values{}
 	params.Add("nickname", nickname)
 	nexonURL.RawQuery = params.Encode()
@@ -90,12 +98,8 @@ func (s *Server) makeAccountInfoRequest(nickname string) (nexonOuidResponse, err
 }
 
 func (s *Server) getMatchList(ouid, matchtype string) (matchListResponse, error) {
-	matchListURL, err := url.Parse(MATCH_LIST_REQUEST_URL)
-	if err != nil {
-		return nil, err
-	}
+	matchListURL, _ := url.Parse(MatchListRequestUrl)
 
-	// Set query parameters
 	params := url.Values{}
 	params.Add("ouid", ouid)
 	params.Add("matchtype", matchtype)
@@ -123,8 +127,38 @@ func (s *Server) getMatchList(ouid, matchtype string) (matchListResponse, error)
 	return matchList, nil
 }
 
+func (s *Server) getMatchDetail(matchId string) (structs.MatchDetailResponse, error) {
+	matchListURL, _ := url.Parse(MatchDetailRequestUrl)
+
+	params := url.Values{}
+	params.Add("matchid", matchId)
+	matchListURL.RawQuery = params.Encode()
+
+	resp, err := s.makeAPIRequest(matchListURL.String())
+	if err != nil {
+		return structs.MatchDetailResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return structs.MatchDetailResponse{}, &httpError{resp.StatusCode, "Failed to get match list in API"}
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return structs.MatchDetailResponse{}, err
+	}
+
+	var matchDetailList structs.MatchDetailResponse
+	if err := json.Unmarshal(body, &matchDetailList); err != nil {
+		log.Println("Json Unmarshal error - ", err)
+		return matchDetailList, err
+	}
+	return matchDetailList, nil
+}
+
 func (s *Server) makeAPIRequest(url string) (*http.Response, error) {
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{Timeout: 30 * time.Second}
 	apiReq, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
